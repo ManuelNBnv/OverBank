@@ -14,7 +14,6 @@ struct Usuarios {
 };
 
 void registrarUsuarios();
-
 void iniciarSeccion();
 
 #endif

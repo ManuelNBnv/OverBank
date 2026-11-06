@@ -4,6 +4,7 @@
 #include "../include/users.h"
 
 void guardarUsuario(const Usuarios &usuario);
-void cargarUsuario();
+bool cargarUsuario(int idBuscado, Usuarios &usuarioEncontrado);
+int obtenerSiguienteID();
 
 #endif
