@@ -1,119 +1,102 @@
 #include "../include/users.h"
 #include "../include/overbank.h"
 #include "../include/storage.h"
+#include "../include/ui.h"
 #include <cctype>
-#include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <string>
-#include <unistd.h>
+#include <vector>
 
 using namespace std;
 
-void guardadoDeUsuarios();
-void iniciarSeccion();
+bool pinValido(const string &pin) {
+  if (pin.size() != 4) {
+    return false;
+  }
 
-bool saldoValido = false;
-bool esNumerica = true;
-int ids = 1000;
-Usuarios usuarios[100];
-int cantidadUsuarios = 0;
+  for (size_t i = 0; i < pin.size(); i++) {
+    if (!isdigit(static_cast<unsigned char>(pin[i]))) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 void registrarUsuarios() {
+  Usuarios nuevoUsuario;
+  nuevoUsuario.saldo = 0;
 
-  if (cantidadUsuarios >= 100) {
-    cout << "Limite de usuarios alcanzado\n";
+  if (!uiLeerTexto("REGISTRO", "Nombre completo", nuevoUsuario.nombre) ||
+      nuevoUsuario.nombre.empty()) {
+    uiError("REGISTRO", "El nombre no puede estar vacio.");
     return;
   }
 
-  cout << "-----------------------------\n";
-  cout << "       LOGIN OVERBANK\n";
-  cout << "-----------------------------\n";
+  if (!uiLeerTexto("REGISTRO", "PIN de 4 digitos", nuevoUsuario.contraseña, true) ||
+      !pinValido(nuevoUsuario.contraseña)) {
+    uiError("REGISTRO", "El PIN debe tener exactamente 4 digitos.");
+    return;
+  }
 
-  do {
+  if (!uiLeerMonto("REGISTRO", "Saldo inicial", nuevoUsuario.saldo) ||
+      nuevoUsuario.saldo < 0) {
+    uiError("REGISTRO", "El saldo inicial debe ser un numero mayor o igual a 0.");
+    return;
+  }
 
-    cout << "-----------------------------\n";
-    cout << "Digita tu usuario\n";
-    cout << "-----------------------------\n";
+  nuevoUsuario.id = obtenerSiguienteID();
 
-    getline(cin, usuarios[cantidadUsuarios].nombre);
+  Movimiento apertura;
+  apertura.idUsuario = nuevoUsuario.id;
+  apertura.tipo = "APERTURA";
+  apertura.monto = nuevoUsuario.saldo;
+  apertura.saldo = nuevoUsuario.saldo;
+  apertura.detalle = "Apertura de cuenta";
+  apertura.idRelacionado = 0;
 
-  } while (usuarios[cantidadUsuarios].nombre.empty());
+  if (!guardarUsuario(nuevoUsuario) || !guardarMovimiento(apertura)) {
+    uiError("REGISTRO", "No se pudo guardar la cuenta.");
+    return;
+  }
 
-  cout << "-----------------------------\n";
-  cout << "Digita una contraseña de 4 digitos\n";
-  cout << "-----------------------------\n";
+  ostringstream saldoTexto;
+  saldoTexto << fixed << setprecision(2) << nuevoUsuario.saldo;
 
-  cin >> usuarios[cantidadUsuarios].contraseña;
+  vector<string> lineas;
+  lineas.push_back("Cuenta creada correctamente.");
+  lineas.push_back("ID: " + to_string(nuevoUsuario.id));
+  lineas.push_back("Nombre: " + nuevoUsuario.nombre);
+  lineas.push_back("Saldo: " + saldoTexto.str());
+  lineas.push_back("Guarda tu ID. El PIN no se volvera a mostrar.");
+  uiMostrar("REGISTRO", lineas);
 
-  usuarios[cantidadUsuarios].id = obtenerSiguienteID();
-
-  do {
-    cout << "-----------------------------\n";
-    cout << "Digita un saldo inicial\n";
-    cout << "-----------------------------\n";
-
-    cin >> usuarios[cantidadUsuarios].saldo;
-
-    if (cin.fail()) {
-      cout << "-----------------------------\n";
-      cout << "Digita solo numeros para el saldo iniciall\n";
-      cout << "-----------------------------\n";
-
-      saldoValido = false;
-
-      cin.clear();
-      cin.ignore(1000, '\n');
-    } else {
-      saldoValido = usuarios[cantidadUsuarios].saldo >= 0;
-    }
-
-  } while (!saldoValido);
-
-  system("clear");
-
-  cout << "-----------------------------\n";
-  cout << "Datos de cuenta\n";
-  cout << "-----------------------------\n";
-
-  cout << "Tu ID es: " << usuarios[cantidadUsuarios].id << "\n";
-  cout << "TU nombre es: " << usuarios[cantidadUsuarios].nombre << "\n";
-  cout << "TU contraseña es: " << usuarios[cantidadUsuarios].contraseña << "\n";
-  cout << "TU saldo es: " << usuarios[cantidadUsuarios].saldo << "\n\n";
-
-  guardarUsuario(usuarios[cantidadUsuarios]);
-  cantidadUsuarios++;
-
-  cout << "Recuerde su datos lo REDIRECCIONAREMOS al LOGIN en breve\n";
-
-  sleep(10);
-  system("clear");
-
-  iniciarSeccion();
+  overbank(nuevoUsuario);
 }
 
 void iniciarSeccion() {
-
-  int idBuscado;
+  int idBuscado = 0;
+  string pin;
   Usuarios usuarioEncontrado;
-  string contraseñaIngresada;
 
-  cout << "-----------------------------\n";
-  cout << "       LOGIN OVERBANK\n";
-  cout << "-----------------------------\n";
-
-  cout << "Ingresa tu ID: ";
-  cin >> idBuscado;
-
-  if (cargarUsuario(idBuscado, usuarioEncontrado)) {
-    cout << "Ingresa tu contraseña: \n";
-    cin >> contraseñaIngresada;
-
-    if (contraseñaIngresada == usuarioEncontrado.contraseña) {
-      overbank();
-    } else {
-      cout << "Contraseña incorrecta\n";
-    }
-
-  } else {
-    cout << "Usuario no encontrado\n";
+  if (!uiLeerEntero("INICIAR SESION", "Ingresa tu ID", idBuscado)) {
+    return;
   }
+
+  if (!cargarUsuario(idBuscado, usuarioEncontrado)) {
+    uiError("INICIAR SESION", "Usuario no encontrado.");
+    return;
+  }
+
+  if (!uiLeerTexto("INICIAR SESION", "Ingresa tu PIN", pin, true)) {
+    return;
+  }
+
+  if (pin != usuarioEncontrado.contraseña) {
+    uiError("INICIAR SESION", "PIN incorrecto.");
+    return;
+  }
+
+  overbank(usuarioEncontrado);
 }

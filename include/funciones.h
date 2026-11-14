@@ -6,5 +6,9 @@
 void consultarSaldo(Usuarios &usuario);
 void depositarDinero(Usuarios &usuario);
 void retirarDinero(Usuarios &usuario);
+void transferirDinero(Usuarios &usuario);
+void verHistorial(Usuarios &usuario);
+void mostrarDatosCuenta(Usuarios &usuario);
+void cambiarContraseña(Usuarios &usuario);
 
 #endif

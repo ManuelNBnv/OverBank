@@ -1,0 +1,4 @@
+overbank
+*.o
+data/*.txt
+data/*.tmp

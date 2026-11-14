@@ -1,46 +1,23 @@
-
+#include "include/ui.h"
 #include "include/users.h"
-#include <iostream>
-#include <unistd.h>
-
-using namespace std;
-
-int opcion;
 
 int main() {
+  const char *opciones[] = {"Registrar usuario", "Iniciar sesion", "Salir"};
 
-  cout << "========================\n";
-  cout << "       OVERBANK\n";
-  cout << "========================\n";
-  cout << "1. Registrar usuario\n";
-  cout << "2. Iniciar sesion\n";
-  cout << "3. Salir\n\n";
-  cout << "Selecciona una opcion: ";
+  uiIniciar();
 
-  cin >> opcion;
+  while (true) {
+    int seleccion = uiMenu("CAJERO AUTOMATICO", "Bienvenido a OverBank", opciones, 3);
 
-  switch (opcion) {
-  case 1:
-    system("clear");
-    registrarUsuarios();
-    break;
-
-  case 2:
-    system("clear");
-    iniciarSeccion();
-    break;
-
-  case 3:
-    system("clear");
-    cout << "Gracias por usar OverBank\n";
-    sleep(3);
-    return 0;
-    break;
-
-  default:
-    cout << "Opcion no valida\n";
-    break;
+    if (seleccion == 0) {
+      registrarUsuarios();
+    } else if (seleccion == 1) {
+      iniciarSeccion();
+    } else {
+      break;
+    }
   }
 
+  uiCerrar();
   return 0;
 }
